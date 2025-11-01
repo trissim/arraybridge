@@ -12,8 +12,6 @@ on a single 2D slice. No logic may check, coerce, or infer rank at unstack time.
 import logging
 from typing import Any
 
-import numpy as np
-
 from arraybridge.converters import detect_memory_type
 from arraybridge.framework_config import _FRAMEWORK_CONFIG
 from arraybridge.types import GPU_MEMORY_TYPES, MemoryType
