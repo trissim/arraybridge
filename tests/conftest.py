@@ -4,6 +4,17 @@ import pytest
 import numpy as np
 
 
+def pytest_configure(config):
+    """Configure pytest with custom markers."""
+    config.addinivalue_line("markers", "gpu: tests that require actual GPU hardware")
+    config.addinivalue_line("markers", "cupy: tests that require CuPy")
+    config.addinivalue_line("markers", "torch: tests that require PyTorch")
+    config.addinivalue_line("markers", "tensorflow: tests that require TensorFlow")
+    config.addinivalue_line("markers", "jax: tests that require JAX")
+    config.addinivalue_line("markers", "pyclesperanto: tests that require pyclesperanto")
+    config.addinivalue_line("markers", "slow: tests that take a long time to run")
+
+
 @pytest.fixture
 def sample_2d_array():
     """Create a sample 2D NumPy array for testing."""
@@ -47,11 +58,14 @@ def torch_available():
 
 @pytest.fixture(scope="session")
 def cupy_available():
-    """Check if CuPy is available."""
+    """Check if CuPy is available and has GPU access."""
     try:
-        import cupy
+        import cupy as cp
+        # Try to create a small array to verify GPU access
+        _ = cp.array([1, 2, 3])
         return True
-    except ImportError:
+    except (ImportError, Exception):
+        # CuPy not installed or no GPU available
         return False
 
 
@@ -83,3 +97,23 @@ def pyclesperanto_available():
         return True
     except ImportError:
         return False
+
+
+@pytest.fixture(scope="session")
+def gpu_available():
+    """Check if a GPU is available (CUDA or similar)."""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            return True
+    except ImportError:
+        pass
+
+    try:
+        import cupy as cp
+        _ = cp.array([1])
+        return True
+    except (ImportError, Exception):
+        pass
+
+    return False

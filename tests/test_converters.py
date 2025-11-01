@@ -29,6 +29,7 @@ class TestDetectMemoryType:
         detected = detect_memory_type(arr)
         assert detected == "numpy"
 
+    @pytest.mark.torch
     def test_detect_torch_tensor(self, torch_available):
         """Test detecting PyTorch tensor."""
         if not torch_available:
@@ -87,6 +88,7 @@ class TestConvertMemory:
         with pytest.raises((ValueError, AttributeError)):
             convert_memory(arr, source_type="numpy", target_type="invalid_type", gpu_id=0)
 
+    @pytest.mark.torch
     def test_convert_numpy_to_torch(self, torch_available):
         """Test converting NumPy to PyTorch."""
         if not torch_available:
@@ -99,6 +101,7 @@ class TestConvertMemory:
         assert isinstance(result, torch.Tensor)
         np.testing.assert_array_almost_equal(result.cpu().numpy(), arr)
 
+    @pytest.mark.torch
     def test_convert_torch_to_numpy(self, torch_available):
         """Test converting PyTorch to NumPy."""
         if not torch_available:
@@ -150,6 +153,7 @@ class TestConversionIntegration:
         result = convert_memory(arr, source_type=detected_type, target_type="numpy", gpu_id=0)
         np.testing.assert_array_equal(result, arr)
 
+    @pytest.mark.torch
     def test_round_trip_conversion_numpy_torch(self, torch_available):
         """Test round-trip conversion: NumPy -> PyTorch -> NumPy."""
         if not torch_available:

@@ -69,6 +69,15 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "--cov=arraybridge --cov-report=term-missing --cov-report=html"
+markers = [
+    "gpu: tests that require actual GPU hardware",
+    "cupy: tests that require CuPy (GPU-only framework)",
+    "torch: tests that require PyTorch",
+    "tensorflow: tests that require TensorFlow",
+    "jax: tests that require JAX",
+    "pyclesperanto: tests that require pyclesperanto",
+    "slow: tests that take a long time to run",
+]
 
 [tool.black]
 line-length = 100

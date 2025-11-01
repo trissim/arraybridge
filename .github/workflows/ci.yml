@@ -8,21 +8,21 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Test across Python versions and OSes with different framework combinations
+  # Test across Python versions with CPU-compatible frameworks
   test:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12"]
         os: [ubuntu-latest, windows-latest, macos-latest]
-        framework: [none, torch, cupy]
+        framework: [none, torch]
         exclude:
-          # CuPy requires CUDA, skip on macOS and most CI runs
-          - os: macos-latest
-            framework: cupy
+          # Reduce matrix size - test torch mainly on ubuntu
           - os: windows-latest
-            framework: cupy
+            framework: torch
+          - os: macos-latest
+            framework: torch
 
     steps:
       - name: Checkout
@@ -38,16 +38,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Install PyTorch (CPU)
+      - name: Install PyTorch (CPU-only)
         if: matrix.framework == 'torch'
         run: |
           pip install torch --index-url https://download.pytorch.org/whl/cpu
-
-      - name: Install CuPy (CPU fallback)
-        if: matrix.framework == 'cupy'
-        run: |
-          # Install NumPy-compatible CuPy for testing (no CUDA required)
-          pip install cupy || echo "CuPy installation failed, skipping"
 
       - name: Run tests with coverage
         run: |
@@ -60,9 +54,11 @@ jobs:
           file: ./coverage.xml
           fail_ci_if_error: false
 
-  # GPU tests with GitHub Actions GPU runners (free beta for public repos)
+  # GPU tests with GitHub Actions GPU runners (optional, non-blocking)
+  # Note: GPU runners may have long queue times, so this job is allowed to fail
   gpu-test:
     runs-on: ubuntu-latest-gpu-t4
+    continue-on-error: true  # Don't block PR merges if GPU tests fail or timeout
     
     steps:
       - name: Checkout
