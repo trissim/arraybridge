@@ -26,10 +26,7 @@ def convert_memory(data: Any, source_type: str, target_type: str, gpu_id: int) -
         ValueError: If source_type or target_type is invalid
         MemoryConversionError: If conversion fails
     """
-    # Validate source_type is valid
-    _ = MemoryType(source_type)  # Will raise ValueError if invalid
-    
-    converter = get_converter(source_type)
+    converter = get_converter(source_type)  # Will raise ValueError if invalid
     method = getattr(converter, f"to_{target_type}")
     return method(data, gpu_id)
 

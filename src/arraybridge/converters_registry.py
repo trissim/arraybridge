@@ -55,7 +55,14 @@ def _ensure_module(memory_type: str):
 
 
 def _make_lambda_with_name(expr_str, mem_type, method_name):
-    """Create a lambda from expression string and add proper __name__ for debugging."""
+    """Create a lambda from expression string and add proper __name__ for debugging.
+    
+    Note: Uses eval() for dynamic code generation from trusted framework_config.py strings.
+    This is safe because:
+    1. Input strings come from _FRAMEWORK_CONFIG, not user input
+    2. Strings are defined at module load time by package maintainers
+    3. This pattern enables declarative framework configuration
+    """
     module_str = f'_ensure_module("{mem_type.value}")'
     lambda_expr = f'lambda self, data, gpu_id: {expr_str.format(mod=module_str)}'
     lambda_func = eval(lambda_expr)
