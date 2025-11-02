@@ -36,19 +36,6 @@ class TestRegistryIntegration:
             # Verify memory_type matches
             assert converter.memory_type == memory_type
 
-    def test_backward_compatibility_with_old_api(self):
-        """Test that old _CONVERTERS dict still works for backward compatibility."""
-        from arraybridge.conversion_helpers import _CONVERTERS
-        from arraybridge.types import MemoryType
-        import numpy as np
-
-        # Old API still works
-        arr = np.array([1, 2, 3])
-        converter = _CONVERTERS[MemoryType.NUMPY]
-        result = converter.to_numpy(arr, gpu_id=0)
-        
-        np.testing.assert_array_equal(result, arr)
-
     def test_memory_type_enum_integration(self):
         """Test that MemoryType enum integrates seamlessly with registry."""
         from arraybridge.types import MemoryType

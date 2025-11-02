@@ -93,23 +93,25 @@ converter = MemoryType.MXNET.converter
 
 ## Benefits of This Approach
 
-### Before (Manual Wiring)
+### Before (Manual Wiring - Old System)
 ```python
-# Had to manually create converter class
+# Had to manually create converter class with all methods
 class MxnetConverter(MemoryTypeConverter):
     def to_numpy(self, data, gpu_id):
         return data.asnumpy()
-    # ... many more methods
+    def from_numpy(self, data, gpu_id):
+        return mxnet.nd.array(data)
+    def to_torch(self, data, gpu_id):
+        # ... manual implementation
+    def to_cupy(self, data, gpu_id):
+        # ... manual implementation
+    # ... 6+ more methods
 
 # Had to manually register
 _CONVERTERS[MemoryType.MXNET] = MxnetConverter()
-
-# Had to manually add conversion methods
-def to_mxnet(self, data, gpu_id):
-    # ... complex logic
 ```
 
-### After (Auto-registration)
+### After (Auto-registration - New System)
 ```python
 # Just add to enum and config - everything else is automatic!
 MemoryType.MXNET = "mxnet"
