@@ -115,30 +115,30 @@ def _allocate_stack_array(
         # It's a callable that determines if conversion is needed
         needs_conversion = needs_conversion(first_slice, detect_memory_type)
 
+    # Initialize variables for eval expressions
+    sample_converted = None
     if needs_conversion:
         from arraybridge.converters import convert_memory
 
         first_slice_source_type = detect_memory_type(first_slice)
-        sample_converted = convert_memory(  # noqa: F841 (used in eval)
+        sample_converted = convert_memory(
             data=first_slice,
             source_type=first_slice_source_type,
             target_type=memory_type,
             gpu_id=gpu_id,
         )
-        dtype = sample_converted.dtype  # noqa: F841 (used in eval)
-    else:
-        dtype = (
-            first_slice.dtype if hasattr(first_slice, "dtype") else None
-        )  # noqa: F841 (used in eval)
 
     # Set up local variables for eval
-    np = optional_import("numpy")  # noqa: F841 (used in eval)
-    cupy = mod if mem_type == MemoryType.CUPY else None  # noqa: F841 (used in eval)
-    torch = mod if mem_type == MemoryType.TORCH else None  # noqa: F841 (used in eval)
-    tf = mod if mem_type == MemoryType.TENSORFLOW else None  # noqa: F841 (used in eval)
-    jnp = (
-        optional_import("jax.numpy") if mem_type == MemoryType.JAX else None
-    )  # noqa: F841 (used in eval)
+    np = optional_import("numpy")  # noqa: F841
+    cupy = mod if mem_type == MemoryType.CUPY else None  # noqa: F841
+    torch = mod if mem_type == MemoryType.TORCH else None  # noqa: F841
+    tf = mod if mem_type == MemoryType.TENSORFLOW else None  # noqa: F841
+    jnp = optional_import("jax.numpy") if mem_type == MemoryType.JAX else None  # noqa: F841
+    # dtype is used in allocate_expr eval below (for numpy framework)
+    dtype = (  # noqa: F841
+        sample_converted.dtype if sample_converted is not None
+        else (first_slice.dtype if hasattr(first_slice, "dtype") else None)
+    )
 
     # Execute allocation with context if needed
     allocate_context = config.get("allocate_context")
@@ -178,11 +178,6 @@ def stack_slices(slices: list[Any], memory_type: str, gpu_id: int) -> Any:
     for i, slice_data in enumerate(slices):
         if not _is_2d(slice_data):
             raise ValueError(f"Slice at index {i} is not a 2D array. All slices must be 2D.")
-
-    # Analyze input types for conversion planning (minimal logging)
-    input_types = [detect_memory_type(slice_data) for slice_data in slices]
-    unique_input_types = set(input_types)
-    memory_type not in unique_input_types or len(unique_input_types) > 1
 
     # Check GPU requirements
     _enforce_gpu_device_requirements(memory_type, gpu_id)

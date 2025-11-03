@@ -1,8 +1,7 @@
 """Pytest configuration and fixtures for arraybridge tests."""
 
-import sys
-import pytest
 import numpy as np
+import pytest
 
 
 # Helper functions for safe module checking
@@ -89,8 +88,7 @@ def sample_uint16_array():
 def torch_available():
     """Check if PyTorch is available."""
     try:
-        import torch
-
+        import torch  # noqa: F401
         return True
     except ImportError:
         return False
@@ -114,8 +112,7 @@ def cupy_available():
 def tensorflow_available():
     """Check if TensorFlow is available."""
     try:
-        import tensorflow as tf
-
+        import tensorflow as tf  # noqa: F401
         return True
     except ImportError:
         return False
@@ -125,8 +122,7 @@ def tensorflow_available():
 def jax_available():
     """Check if JAX is available."""
     try:
-        import jax
-
+        import jax  # noqa: F401
         return True
     except ImportError:
         return False
@@ -136,8 +132,7 @@ def jax_available():
 def pyclesperanto_available():
     """Check if pyclesperanto is available."""
     try:
-        import pyclesperanto_prototype
-
+        import pyclesperanto_prototype  # noqa: F401
         return True
     except ImportError:
         return False
