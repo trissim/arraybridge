@@ -14,9 +14,9 @@ class TestConverterRegistry:
         expected_types = {mt.value for mt in MemoryType}
         registered_types = set(ConverterBase.__registry__.keys())
 
-        assert expected_types == registered_types, (
-            f"Registry mismatch. Expected: {expected_types}, Got: {registered_types}"
-        )
+        assert (
+            expected_types == registered_types
+        ), f"Registry mismatch. Expected: {expected_types}, Got: {registered_types}"
 
     def test_get_converter_returns_valid_converter(self):
         """Test that get_converter returns a valid converter instance."""
@@ -49,6 +49,48 @@ class TestConverterRegistry:
         assert "No converter registered" in str(exc_info.value)
         assert "invalid_type" in str(exc_info.value)
 
+    def test_registry_validation_passes(self):
+        """Test that registry validation passes with current setup."""
+        from arraybridge.converters_registry import _validate_registry
+
+        # Should not raise any exception
+        _validate_registry()
+
+    def test_registry_validation_fails_on_missing_type(self, monkeypatch):
+        """Test that registry validation fails if a memory type is missing."""
+        from arraybridge.converters_registry import ConverterBase, _validate_registry
+
+        # Temporarily remove a converter from registry
+        original_registry = ConverterBase.__registry__.copy()
+        removed_type = "numpy"
+        del ConverterBase.__registry__[removed_type]
+
+        try:
+            with pytest.raises(RuntimeError) as exc_info:
+                _validate_registry()
+            assert "Missing" in str(exc_info.value)
+            assert removed_type in str(exc_info.value)
+        finally:
+            # Restore registry
+            ConverterBase.__registry__ = original_registry
+
+    def test_registry_validation_fails_on_extra_type(self, monkeypatch):
+        """Test that registry validation fails if there's an extra type."""
+        from arraybridge.converters_registry import ConverterBase, _validate_registry
+
+        # Temporarily add an extra converter
+        original_registry = ConverterBase.__registry__.copy()
+        ConverterBase.__registry__["extra_type"] = type("ExtraConverter", (), {})
+
+        try:
+            with pytest.raises(RuntimeError) as exc_info:
+                _validate_registry()
+            assert "Extra" in str(exc_info.value)
+            assert "extra_type" in str(exc_info.value)
+        finally:
+            # Restore registry
+            ConverterBase.__registry__ = original_registry
+
     def test_converter_has_to_x_methods(self):
         """Test that converters have to_X() methods for all memory types."""
         from arraybridge.converters_registry import get_converter
@@ -59,9 +101,7 @@ class TestConverterRegistry:
         # Check that it has to_X() methods for all memory types
         for target_type in MemoryType:
             method_name = f"to_{target_type.value}"
-            assert hasattr(numpy_converter, method_name), (
-                f"Converter missing method: {method_name}"
-            )
+            assert hasattr(numpy_converter, method_name), f"Converter missing method: {method_name}"
 
     def test_converter_classes_registered_with_correct_names(self):
         """Test that converter classes are registered with expected names."""
@@ -85,7 +125,7 @@ class TestConverterRegistry:
         # They should be different instances
         assert converter1 is not converter2
         # But same type
-        assert type(converter1) == type(converter2)
+        assert isinstance(converter1, type(converter2))
 
 
 class TestMemoryTypeConverterProperty:

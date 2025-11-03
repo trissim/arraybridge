@@ -51,12 +51,13 @@ class ConverterBase(metaclass=AutoRegisterMeta):
 def _ensure_module(memory_type: str):
     """Import and return the module for the given memory type."""
     from arraybridge.utils import _ensure_module as _ensure_module_impl
+
     return _ensure_module_impl(memory_type)
 
 
 def _make_lambda_with_name(expr_str, mem_type, method_name):
     """Create a lambda from expression string and add proper __name__ for debugging.
-    
+
     Note: Uses eval() for dynamic code generation from trusted framework_config.py strings.
     This is safe because:
     1. Input strings come from _FRAMEWORK_CONFIG, not user input
@@ -64,19 +65,21 @@ def _make_lambda_with_name(expr_str, mem_type, method_name):
     3. This pattern enables declarative framework configuration
     """
     module_str = f'_ensure_module("{mem_type.value}")'
-    lambda_expr = f'lambda self, data, gpu_id: {expr_str.format(mod=module_str)}'
+    lambda_expr = f"lambda self, data, gpu_id: {expr_str.format(mod=module_str)}"
     lambda_func = eval(lambda_expr)
     lambda_func.__name__ = method_name
-    lambda_func.__qualname__ = f'{mem_type.value.capitalize()}Converter.{method_name}'
+    lambda_func.__qualname__ = f"{mem_type.value.capitalize()}Converter.{method_name}"
     return lambda_func
 
 
 def _make_not_implemented(mem_type_value, method_name):
     """Create a lambda that raises NotImplementedError with the correct signature."""
+
     def not_impl(self, data, gpu_id):
         raise NotImplementedError(f"DLPack not supported for {mem_type_value}")
+
     not_impl.__name__ = method_name
-    not_impl.__qualname__ = f'{mem_type_value.capitalize()}Converter.{method_name}'
+    not_impl.__qualname__ = f"{mem_type_value.capitalize()}Converter.{method_name}"
     return not_impl
 
 
@@ -84,29 +87,29 @@ def _make_not_implemented(mem_type_value, method_name):
 def _create_converter_classes():
     """Create concrete converter classes for each memory type."""
     converters = {}
-    
+
     for mem_type in MemoryType:
         config = _FRAMEWORK_CONFIG[mem_type]
-        conversion_ops = config['conversion_ops']
-        
+        conversion_ops = config["conversion_ops"]
+
         # Build class attributes
         class_attrs = {
-            'memory_type': mem_type.value,
+            "memory_type": mem_type.value,
         }
-        
+
         # Add conversion methods
         for method_name, expr in conversion_ops.items():
             if expr is None:
                 class_attrs[method_name] = _make_not_implemented(mem_type.value, method_name)
             else:
                 class_attrs[method_name] = _make_lambda_with_name(expr, mem_type, method_name)
-        
+
         # Create the class
         class_name = f"{mem_type.value.capitalize()}Converter"
         converter_class = type(class_name, (ConverterBase,), class_attrs)
-        
+
         converters[mem_type] = converter_class
-    
+
     return converters
 
 
@@ -142,7 +145,7 @@ def _add_converter_methods():
     that tries GPU-to-GPU conversion via DLPack first, then falls back to CPU roundtrip.
     """
     from arraybridge.utils import _supports_dlpack
-    
+
     for target_type in MemoryType:
         method_name = f"to_{target_type.value}"
 
@@ -161,6 +164,7 @@ def _add_converter_methods():
                 numpy_data = self.to_numpy(data, gpu_id)
                 target_converter = get_converter(tgt.value)
                 return target_converter.from_numpy(numpy_data, gpu_id)
+
             return method
 
         setattr(ConverterBase, method_name, make_method(target_type))
@@ -170,7 +174,7 @@ def _validate_registry():
     """Validate that all memory types are registered."""
     required_types = {mt.value for mt in MemoryType}
     registered_types = set(ConverterBase.__registry__.keys())
-    
+
     if required_types != registered_types:
         missing = required_types - registered_types
         extra = registered_types - required_types
@@ -179,13 +183,9 @@ def _validate_registry():
             msg_parts.append(f"Missing: {missing}")
         if extra:
             msg_parts.append(f"Extra: {extra}")
-        raise RuntimeError(
-            f"Registry validation failed. {', '.join(msg_parts)}"
-        )
-    
-    logger.debug(
-        f"✅ Validated {len(registered_types)} memory type converters in registry"
-    )
+        raise RuntimeError(f"Registry validation failed. {', '.join(msg_parts)}")
+
+    logger.debug(f"✅ Validated {len(registered_types)} memory type converters in registry")
 
 
 # Add to_X() conversion methods after converter classes are created

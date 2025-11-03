@@ -1,7 +1,45 @@
 """Pytest configuration and fixtures for arraybridge tests."""
 
-import pytest
 import numpy as np
+import pytest
+
+
+# Helper functions for safe module checking
+def _module_available(module_name):
+    """Check if a module is available without triggering ImportError."""
+    try:
+        __import__(module_name)
+        return True
+    except ImportError:
+        return False
+
+
+def _module_has_attribute(module_name, attribute):
+    """Check if a module is available and has an attribute."""
+    try:
+        module = __import__(module_name)
+        return hasattr(module, attribute)
+    except ImportError:
+        return False
+
+
+def _can_import_and_has_cuda(module_name):
+    """Check if module is available and has CUDA."""
+    try:
+        module = __import__(module_name)
+        if module_name == "cupy":
+            return hasattr(module, "cuda")
+        elif module_name == "torch":
+            return hasattr(module, "cuda")
+        elif module_name == "tensorflow":
+            return hasattr(module, "config")
+        elif module_name == "jax":
+            return hasattr(module, "numpy")
+        elif module_name == "pyclesperanto":
+            return hasattr(module, "get_device")
+        return False
+    except ImportError:
+        return False
 
 
 def pytest_configure(config):
@@ -50,7 +88,7 @@ def sample_uint16_array():
 def torch_available():
     """Check if PyTorch is available."""
     try:
-        import torch
+        import torch  # noqa: F401
         return True
     except ImportError:
         return False
@@ -61,6 +99,7 @@ def cupy_available():
     """Check if CuPy is available and has GPU access."""
     try:
         import cupy as cp
+
         # Try to create a small array to verify GPU access
         _ = cp.array([1, 2, 3])
         return True
@@ -73,7 +112,7 @@ def cupy_available():
 def tensorflow_available():
     """Check if TensorFlow is available."""
     try:
-        import tensorflow as tf
+        import tensorflow as tf  # noqa: F401
         return True
     except ImportError:
         return False
@@ -83,7 +122,7 @@ def tensorflow_available():
 def jax_available():
     """Check if JAX is available."""
     try:
-        import jax
+        import jax  # noqa: F401
         return True
     except ImportError:
         return False
@@ -93,7 +132,7 @@ def jax_available():
 def pyclesperanto_available():
     """Check if pyclesperanto is available."""
     try:
-        import pyclesperanto_prototype
+        import pyclesperanto_prototype  # noqa: F401
         return True
     except ImportError:
         return False
@@ -104,6 +143,7 @@ def gpu_available():
     """Check if a GPU is available (CUDA or similar)."""
     try:
         import torch
+
         if torch.cuda.is_available():
             return True
     except ImportError:
@@ -111,6 +151,7 @@ def gpu_available():
 
     try:
         import cupy as cp
+
         _ = cp.array([1])
         return True
     except (ImportError, Exception):

@@ -1,13 +1,14 @@
 """Integration tests for arraybridge."""
 
-import pytest
 import numpy as np
+import pytest
+
 from arraybridge import (
-    convert_memory,
-    detect_memory_type,
-    MemoryType,
     CPU_MEMORY_TYPES,
     GPU_MEMORY_TYPES,
+    MemoryType,
+    convert_memory,
+    detect_memory_type,
 )
 
 
@@ -17,14 +18,14 @@ class TestBasicWorkflow:
     def test_import_all_exports(self):
         """Test that all main exports are importable."""
         from arraybridge import (
-            MemoryType,
             CPU_MEMORY_TYPES,
             GPU_MEMORY_TYPES,
             SUPPORTED_MEMORY_TYPES,
+            MemoryConversionError,
+            MemoryType,
             convert_memory,
             detect_memory_type,
             memory_types,
-            MemoryConversionError,
         )
 
         # Verify types exist
@@ -98,6 +99,7 @@ class TestFrameworkAvailability:
     def test_numpy_always_available(self):
         """Test that NumPy is always available."""
         import numpy
+
         assert numpy is not None
 
     def test_optional_framework_import(self):
