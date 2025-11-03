@@ -49,6 +49,49 @@ class TestConverterRegistry:
         assert "No converter registered" in str(exc_info.value)
         assert "invalid_type" in str(exc_info.value)
 
+    def test_registry_validation_passes(self):
+        """Test that registry validation passes with current setup."""
+        from arraybridge.converters_registry import _validate_registry
+
+        # Should not raise any exception
+        _validate_registry()
+
+    def test_registry_validation_fails_on_missing_type(self, monkeypatch):
+        """Test that registry validation fails if a memory type is missing."""
+        from arraybridge.converters_registry import ConverterBase, _validate_registry
+        from arraybridge.types import MemoryType
+
+        # Temporarily remove a converter from registry
+        original_registry = ConverterBase.__registry__.copy()
+        removed_type = "numpy"
+        del ConverterBase.__registry__[removed_type]
+
+        try:
+            with pytest.raises(RuntimeError) as exc_info:
+                _validate_registry()
+            assert "Missing" in str(exc_info.value)
+            assert removed_type in str(exc_info.value)
+        finally:
+            # Restore registry
+            ConverterBase.__registry__ = original_registry
+
+    def test_registry_validation_fails_on_extra_type(self, monkeypatch):
+        """Test that registry validation fails if there's an extra type."""
+        from arraybridge.converters_registry import ConverterBase, _validate_registry
+
+        # Temporarily add an extra converter
+        original_registry = ConverterBase.__registry__.copy()
+        ConverterBase.__registry__["extra_type"] = type("ExtraConverter", (), {})
+
+        try:
+            with pytest.raises(RuntimeError) as exc_info:
+                _validate_registry()
+            assert "Extra" in str(exc_info.value)
+            assert "extra_type" in str(exc_info.value)
+        finally:
+            # Restore registry
+            ConverterBase.__registry__ = original_registry
+
     def test_converter_has_to_x_methods(self):
         """Test that converters have to_X() methods for all memory types."""
         from arraybridge.converters_registry import get_converter
