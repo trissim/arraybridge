@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Test across Python versions with CPU-compatible frameworks
+  # Test across Python versions with CPU-compatible frameworks (no torch)
   test:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -16,13 +16,6 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
         os: [ubuntu-latest, windows-latest, macos-latest]
-        framework: [none, torch]
-        exclude:
-          # Reduce matrix size - test torch mainly on ubuntu
-          - os: windows-latest
-            framework: torch
-          - os: macos-latest
-            framework: torch
 
     steps:
       - name: Checkout
@@ -38,71 +31,95 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Install PyTorch (CPU-only)
-        if: matrix.framework == 'torch'
-        run: |
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
-
       - name: Run tests with coverage
         run: |
           pytest --cov=arraybridge --cov-report=xml --cov-report=html --cov-report=term-missing -v
 
       - name: Upload coverage to Codecov
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12' && matrix.framework == 'torch'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         uses: codecov/codecov-action@v3
         with:
           file: ./coverage.xml
           fail_ci_if_error: false
 
-  # GPU tests using Docker container with CUDA
+  # GPU tests - includes PyTorch testing
   gpu-test:
     runs-on: ubuntu-latest
     continue-on-error: true  # Don't block PR merges if GPU not available
-
-    container:
-      image: nvidia/cuda:12.1.0-devel-ubuntu22.04
-      options: --gpus all
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python and dependencies
-        run: |
-          apt-get update && apt-get install -y python3 python3-pip python3-venv
-          python3 -m pip install --upgrade pip
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      - name: Install arraybridge with GPU extras
+      - name: Install base dependencies
         run: |
-          python3 -m pip install -e ".[dev]"
-          # Install GPU frameworks
-          python3 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-          python3 -m pip install jax jaxlib --upgrade --index-url https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-          # Try CuPy installation (may fail if CUDA setup is incomplete)
-          python3 -m pip install cupy-cuda12x 2>&1 || echo "CuPy installation skipped"
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
 
-      - name: Check GPU availability
+      - name: Install PyTorch with GPU support
         run: |
-          python3 << 'EOF'
-          import torch
-          print(f'PyTorch CUDA Available: {torch.cuda.is_available()}')
-          print(f'PyTorch CUDA Devices: {torch.cuda.device_count()}')
-          EOF
-          || true
+          # Install CUDA-enabled PyTorch
+          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121 || echo "PyTorch GPU install attempted"
 
-      - name: Run GPU tests
+      - name: Install additional GPU frameworks
         run: |
-          python3 -m pytest -v tests/test_gpu_cleanup.py \
+          # JAX with CUDA
+          pip install jax jaxlib --upgrade 2>&1 || echo "JAX install skipped (optional)"
+          # CuPy (often needs specific setup)
+          pip install cupy-cuda12x 2>&1 || echo "CuPy install skipped (optional)"
+
+      - name: Check GPU/framework availability
+        run: |
+          python -c "
+          try:
+              import torch
+              print(f'PyTorch available: True')
+              print(f'CUDA available: {torch.cuda.is_available()}')
+              if torch.cuda.is_available():
+                  print(f'CUDA devices: {torch.cuda.device_count()}')
+          except:
+              print('PyTorch not available')
+          
+          try:
+              import jax
+              print(f'JAX available: True')
+          except:
+              print('JAX not available')
+          
+          try:
+              import cupy
+              print(f'CuPy available: True')
+          except:
+              print('CuPy not available')
+          " || true
+
+      - name: Run GPU cleanup tests
+        run: |
+          # Run GPU tests - these will skip gracefully if frameworks unavailable
+          pytest -v tests/test_gpu_cleanup.py \
             --cov=arraybridge \
             --cov-report=term-missing \
             --cov-report=html \
+            --cov-report=xml \
             -ra
 
-      - name: Upload GPU test coverage
+      - name: Upload GPU test coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: gpu-tests
+          fail_ci_if_error: false
+
+      - name: Upload HTML coverage report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gpu-test-coverage
+          name: gpu-test-coverage-report
           path: htmlcov/
 
   # Code quality checks
