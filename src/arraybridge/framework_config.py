@@ -190,6 +190,7 @@ _FRAMEWORK_CONFIG = {
             'astype': 'result.astype(target_dtype)',
             'check_float': 'np.issubdtype(result.dtype, np.floating)',
             'check_int': 'target_dtype in [np.uint8, np.uint16, np.uint32, np.int8, np.int16, np.int32]',  # noqa: E501
+            'clamp': 'np.clip(result, min_val, max_val)',
         },
 
         # Conversion operations
@@ -243,6 +244,7 @@ _FRAMEWORK_CONFIG = {
             'astype': 'result.astype(target_dtype)',
             'check_float': 'mod.issubdtype(result.dtype, mod.floating)',
             'check_int': 'not mod.issubdtype(target_dtype, mod.floating)',
+            'clamp': 'mod.clip(result, min_val, max_val)',
         },
 
         # Conversion operations
@@ -296,6 +298,7 @@ _FRAMEWORK_CONFIG = {
             'check_float': 'result.dtype in [mod.float16, mod.float32, mod.float64]',
             'check_int': 'target_dtype_mapped in [mod.uint8, mod.int8, mod.int16, mod.int32, mod.int64]',  # noqa: E501
             'needs_dtype_map': True,
+            'clamp': 'mod.clamp(result, min=min_val, max=max_val)',
         },
 
         # Conversion operations
@@ -350,6 +353,7 @@ _FRAMEWORK_CONFIG = {
             'check_float': 'result.dtype in [mod.float16, mod.float32, mod.float64]',
             'check_int': 'target_dtype_mapped in [mod.uint8, mod.int8, mod.int16, mod.int32, mod.int64]',  # noqa: E501
             'needs_dtype_map': True,
+            'clamp': 'mod.clip_by_value(result, min_val, max_val)',
         },
 
         # Conversion operations
@@ -407,6 +411,7 @@ _FRAMEWORK_CONFIG = {
             'check_int': 'target_dtype_mapped in [jnp.uint8, jnp.int8, jnp.int16, jnp.int32, jnp.int64]',  # noqa: E501
             'needs_dtype_map': True,
             'extra_import': 'jax.numpy',
+            'clamp': 'jnp.clip(result, min_val, max_val)',
         },
 
         # Conversion operations

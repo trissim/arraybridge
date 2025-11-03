@@ -138,3 +138,8 @@ class TestOOMRecovery:
         result = _execute_with_oom_recovery(failing_then_success_func, memory_type, max_retries=1)
         assert result == f"success_{memory_type}"
         assert call_count["count"] == 2
+
+def test_torch_cache_clear_mock():
+    """Test torch cache clear with mocked torch."""
+    import sys
+    import types

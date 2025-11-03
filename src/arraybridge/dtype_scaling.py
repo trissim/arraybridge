@@ -49,19 +49,21 @@ def _scale_generic(result, target_dtype, mem_type: MemoryType):
     if not hasattr(result, 'dtype'):
         return result
 
+    # Extra imports (e.g., jax.numpy) - load first as dtype_map might need it
+    if 'extra_import' in ops:
+        jnp = optional_import(ops['extra_import'])  # noqa: F841 (used in eval)
+
     # Handle dtype mapping for frameworks that need it
     target_dtype_mapped = target_dtype  # noqa: F841 (used in eval)
     if ops.get('needs_dtype_map'):
+        # Use jnp for JAX, mod for others
+        dtype_module = jnp if 'extra_import' in ops and jnp is not None else mod
         dtype_map = {
-            np.uint8: mod.uint8, np.int8: mod.int8, np.int16: mod.int16,
-            np.int32: mod.int32, np.int64: mod.int64, np.float16: mod.float16,
-            np.float32: mod.float32, np.float64: mod.float64,
+            np.uint8: dtype_module.uint8, np.int8: dtype_module.int8, np.int16: dtype_module.int16,
+            np.int32: dtype_module.int32, np.int64: dtype_module.int64, np.float16: dtype_module.float16,
+            np.float32: dtype_module.float32, np.float64: dtype_module.float64,
         }
-        target_dtype_mapped = dtype_map.get(target_dtype, mod.float32)  # noqa: F841
-
-    # Extra imports (e.g., jax.numpy)
-    if 'extra_import' in ops:
-        jnp = optional_import(ops['extra_import'])  # noqa: F841 (used in eval)
+        target_dtype_mapped = dtype_map.get(target_dtype, dtype_module.float32)  # noqa: F841
 
     # Check if conversion needed (float → int)
     result_is_float = eval(ops['check_float'])
@@ -93,8 +95,23 @@ def _scale_generic(result, target_dtype, mem_type: MemoryType):
         if isinstance(range_info, tuple):
             scale_val, offset_val = range_info
             result = normalized * scale_val - offset_val  # noqa: F841 (used in eval)
+            # Clamp to avoid float32 precision overflow
+            # For int32: range is [-2147483648, 2147483647]
+            # But float32 cannot precisely represent 2147483647, it rounds to 2147483648
+            # float32 has ~7 decimal digits of precision, so large integers lose precision
+            # We need to use a max value that's safely below INT32_MAX when rounded
+            # Subtracting 128 gives us a safe margin while still using most of the range
+            min_val = -offset_val  # noqa: F841 (used in eval)
+            max_val = scale_val - offset_val - 128  # Safe margin for float32 precision  # noqa: F841 E501
         else:
             result = normalized * range_info  # noqa: F841 (used in eval)
+            # For unsigned types: range is [0, range_info]
+            min_val = 0  # noqa: F841 (used in eval)
+            max_val = range_info  # noqa: F841 (used in eval)
+
+        # Clamp to prevent overflow due to float32 precision issues
+        if ops.get('clamp'):
+            result = eval(ops['clamp'])  # noqa: F841 (used in eval)
     else:
         result = normalized  # noqa: F841 (used in eval)
 

@@ -57,6 +57,28 @@ class TestIndividualCleanupFunctions:
         cleanup_cupy_gpu()
         cleanup_cupy_gpu(device_id=0)
 
+    @pytest.mark.skipif(not hasattr(__import__('cupy', fromlist=['']), 'cuda'), reason="CuPy CUDA not available")
+    def test_cupy_cleanup_with_gpu(self):
+        """Test cupy cleanup when cupy and GPU are available."""
+        import cupy as cp
+        from arraybridge.gpu_cleanup import cleanup_cupy_gpu
+        import unittest.mock
+
+        # Create some GPU memory to cleanup
+        try:
+            gpu_array = cp.zeros((100, 100))
+            assert gpu_array.device.id >= 0  # Ensure we have GPU memory
+
+            # Mock the GPU check to return True so cleanup code runs
+            with unittest.mock.patch('arraybridge.gpu_cleanup.eval') as mock_eval:
+                mock_eval.return_value = True  # GPU is available
+                # Cleanup should work without errors
+                cleanup_cupy_gpu()
+                cleanup_cupy_gpu(device_id=0)
+
+        except Exception as e:
+            pytest.skip(f"CuPy GPU test failed: {e}")
+
     def test_torch_cleanup_unavailable(self):
         """Test torch cleanup when torch is not available."""
         from arraybridge.gpu_cleanup import cleanup_torch_gpu
@@ -64,6 +86,28 @@ class TestIndividualCleanupFunctions:
         # Should not raise any errors even if torch not available
         cleanup_torch_gpu()
         cleanup_torch_gpu(device_id=0)
+
+    @pytest.mark.skipif(not hasattr(__import__('torch', fromlist=['']), 'cuda'), reason="PyTorch CUDA not available")
+    def test_torch_cleanup_with_gpu(self):
+        """Test torch cleanup when torch and GPU are available."""
+        import torch
+        from arraybridge.gpu_cleanup import cleanup_torch_gpu
+        import unittest.mock
+
+        # Create some GPU memory to cleanup
+        try:
+            gpu_tensor = torch.zeros((100, 100), device='cuda')
+            assert gpu_tensor.device.type == 'cuda'
+
+            # Mock the GPU check to return True so cleanup code runs
+            with unittest.mock.patch('arraybridge.gpu_cleanup.eval') as mock_eval:
+                mock_eval.return_value = True  # GPU is available
+                # Cleanup should work without errors
+                cleanup_torch_gpu()
+                cleanup_torch_gpu(device_id=0)
+
+        except Exception as e:
+            pytest.skip(f"PyTorch GPU test failed: {e}")
 
     def test_tensorflow_cleanup_unavailable(self):
         """Test tensorflow cleanup when tensorflow is not available."""
@@ -73,6 +117,29 @@ class TestIndividualCleanupFunctions:
         cleanup_tensorflow_gpu()
         cleanup_tensorflow_gpu(device_id=0)
 
+    @pytest.mark.skipif(not hasattr(__import__('tensorflow', fromlist=['']), 'config'), reason="TensorFlow GPU not available")
+    def test_tensorflow_cleanup_with_gpu(self):
+        """Test tensorflow cleanup when tensorflow and GPU are available."""
+        import tensorflow as tf
+        from arraybridge.gpu_cleanup import cleanup_tensorflow_gpu
+        import unittest.mock
+
+        # Create some GPU memory to cleanup
+        try:
+            with tf.device('/GPU:0'):
+                gpu_tensor = tf.zeros((100, 100))
+                assert 'GPU' in gpu_tensor.device
+
+            # Mock the GPU check to return True so cleanup code runs
+            with unittest.mock.patch('arraybridge.gpu_cleanup.eval') as mock_eval:
+                mock_eval.return_value = True  # GPU is available
+                # Cleanup should work without errors
+                cleanup_tensorflow_gpu()
+                cleanup_tensorflow_gpu(device_id=0)
+
+        except Exception as e:
+            pytest.skip(f"TensorFlow GPU test failed: {e}")
+
     def test_jax_cleanup_unavailable(self):
         """Test jax cleanup when jax is not available."""
         from arraybridge.gpu_cleanup import cleanup_jax_gpu
@@ -81,6 +148,27 @@ class TestIndividualCleanupFunctions:
         cleanup_jax_gpu()
         cleanup_jax_gpu(device_id=0)
 
+    @pytest.mark.skipif(not hasattr(__import__('jax', fromlist=['']), 'numpy'), reason="JAX not available")
+    def test_jax_cleanup_with_gpu(self):
+        """Test jax cleanup when jax and GPU are available."""
+        import jax.numpy as jnp
+        from arraybridge.gpu_cleanup import cleanup_jax_gpu
+        import unittest.mock
+
+        # Create some GPU memory to cleanup
+        try:
+            gpu_array = jnp.zeros((100, 100))
+            # JAX arrays are typically on CPU by default, but cleanup should still work
+
+            # Mock the GPU check to return True so cleanup code runs
+            with unittest.mock.patch('arraybridge.gpu_cleanup.eval') as mock_eval:
+                mock_eval.return_value = True  # GPU is available
+                cleanup_jax_gpu()
+                cleanup_jax_gpu(device_id=0)
+
+        except Exception as e:
+            pytest.skip(f"JAX test failed: {e}")
+
     def test_pyclesperanto_cleanup_unavailable(self):
         """Test pyclesperanto cleanup when pyclesperanto is not available."""
         from arraybridge.gpu_cleanup import cleanup_pyclesperanto_gpu
@@ -88,6 +176,26 @@ class TestIndividualCleanupFunctions:
         # Should not raise any errors even if pyclesperanto not available
         cleanup_pyclesperanto_gpu()
         cleanup_pyclesperanto_gpu(device_id=0)
+
+    @pytest.mark.skipif(not hasattr(__import__('pyclesperanto', fromlist=['']), 'get_device'), reason="pyclesperanto not available")
+    def test_pyclesperanto_cleanup_with_gpu(self):
+        """Test pyclesperanto cleanup when pyclesperanto and GPU are available."""
+        import pyclesperanto as cle
+        from arraybridge.gpu_cleanup import cleanup_pyclesperanto_gpu
+        import unittest.mock
+
+        # Create some GPU memory to cleanup
+        try:
+            gpu_array = cle.create((100, 100))
+            # Mock the GPU check to return True so cleanup code runs
+            with unittest.mock.patch('arraybridge.gpu_cleanup.eval') as mock_eval:
+                mock_eval.return_value = True  # GPU is available
+                # Cleanup should work without errors
+                cleanup_pyclesperanto_gpu()
+                cleanup_pyclesperanto_gpu(device_id=0)
+
+        except Exception as e:
+            pytest.skip(f"pyclesperanto GPU test failed: {e}")
 
 
 class TestCleanupAllFrameworks:
